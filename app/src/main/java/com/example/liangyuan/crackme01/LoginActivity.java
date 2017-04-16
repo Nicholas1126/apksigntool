@@ -19,6 +19,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.ContactsContract;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -28,8 +29,13 @@ import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 import static android.Manifest.permission.READ_CONTACTS;
 
@@ -153,13 +159,13 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
 
         // Store values at the time of the login attempt.
         String email = mEmailView.getText().toString();
-        String password = mPasswordView.getText().toString();
+        String SN = mPasswordView.getText().toString();
 
         boolean cancel = false;
         View focusView = null;
 
-        // Check for a valid password, if the user entered one.
-        if (!TextUtils.isEmpty(password) && !isPasswordValid(password)) {
+        // Check for a valid SN, if the user entered one.
+        if (!TextUtils.isEmpty(SN) && !isPasswordValid(SN)) {
             mPasswordView.setError(getString(R.string.error_invalid_password));
             focusView = mPasswordView;
             cancel = true;
@@ -184,8 +190,49 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
             // Show a progress spinner, and kick off a background task to
             // perform the user login attempt.
             showProgress(true);
-            mAuthTask = new UserLoginTask(email, password);
-            mAuthTask.execute((Void) null);
+            //mAuthTask = new UserLoginTask(email, SN);
+            //mAuthTask.execute((Void) null);
+
+            //TODO: Calculate series number here.
+            try {
+                MessageDigest digest = MessageDigest.getInstance("MD5");
+                digest.reset();
+                digest.update(email.getBytes());
+                byte[] bytes = digest.digest();
+
+                StringBuilder stringBuilder = new StringBuilder("");
+
+                for (int i = 0; i < bytes.length; i++) {
+                    int v = bytes[i] & 0xFF;
+                    String hexstr = Integer.toHexString(v);
+                    if (hexstr.length() < 2) {
+                        stringBuilder.append(0);
+                    }
+                    stringBuilder.append(hexstr);
+                }
+
+                String emailSN = stringBuilder.toString();
+
+                Toast toast = Toast.makeText(getApplicationContext(),
+                        emailSN, Toast.LENGTH_SHORT);
+                toast.show();
+
+                if (emailSN.equalsIgnoreCase(SN)) {
+                    Toast.makeText(getApplicationContext(),
+                            "Success!", Toast.LENGTH_SHORT).show();
+                    showProgress(false);
+                    return;
+                }
+
+                Toast.makeText(getApplicationContext(),
+                        "Failure!", Toast.LENGTH_SHORT).show();
+            } catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
+                showProgress(false);
+                return;
+            }
+
+
         }
     }
     private boolean isEmailValid(String email) {
